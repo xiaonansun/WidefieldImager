@@ -530,15 +530,17 @@ function WidefieldImager_CloseRequestFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 %% move saved files to data save location
-sFiles = dir([handles.path.base '*Snapshot*']);
-rFiles = dir([handles.path.base '*ROI*']);
-aFiles = [{sFiles.name} {rFiles.name}];
+temp = ls(handles.path.base);
 
-if ~exist(get(handles.DataPath,'String'), 'dir') %create data path if not existent
+sFiles = ~cellfun('isempty',((strfind(cellstr(ls(handles.path.base)),'Snapshot_')))); %identify snapshot files
+rFiles = ~cellfun('isempty',((strfind(cellstr(ls(handles.path.base)),'ROI')))); %identify ROI file
+aFiles = [temp(sFiles,:);temp(rFiles,:)]; %all files that should be moved
+
+if ~isdir(get(handles.DataPath,'String')) && ~isempty(aFiles) %create data path if not existent and if there is data to be moved
     mkdir(get(handles.DataPath,'String'))
 end
 for iFiles = 1:size(aFiles,1)
-    movefile([handles.path.base aFiles{iFiles}],[get(handles.DataPath,'String') filesep aFiles{iFiles}]); %move files
+    movefile([handles.path.base aFiles(iFiles,:)],[get(handles.DataPath,'String') filesep aFiles(iFiles,:)]); %move files
 end
 
 %% clear running objects
@@ -582,12 +584,18 @@ else
     sFiles = dir([handles.path.base '*Snapshot*']);
     rFiles = dir([handles.path.base '*ROI*']);
     aFiles = [{sFiles.name} {rFiles.name}];
-   
-    if ~exist(get(handles.DataPath,'String'), 'dir') %create data path if not existent
+    
+    for x = 1 : length(temp)
+        if strcmpi(temp(x).name, 'Snapshot')
+        sFiles = ~cellfun('isempty',((strfind(cellstr(ls(handles.path.base)),'Snapshot')))); %identify snapshot files
+    rFiles = ~cellfun('isempty',((strfind(cellstr(ls(handles.path.base)),'ROI.fig')))); %identify ROI file
+    aFiles = [temp(sFiles,:);temp(rFiles,:)]; %all files that should be moved
+    
+    if ~isdir(get(handles.DataPath,'String')) %create data path if not existent
         mkdir(get(handles.DataPath,'String'))
     end
     for iFiles = 1:size(aFiles,1)
-        movefile([handles.path.base aFiles{iFiles}],[get(handles.DataPath,'String') filesep aFiles{iFiles}]); %move files
+        movefile([handles.path.base aFiles(iFiles,:)],[get(handles.DataPath,'String') filesep aFiles(iFiles,:)]); %move files
     end
     save([handles.DataPath.String filesep 'handles.mat'],'handles') %save recorder handles to be able to know all the settings.
     
@@ -850,7 +858,7 @@ else
             drawnow;
             clear Data frameTimes
             
-            disp(['Trial ' handles.TrialNr.String ' completed.']); toc;
+            disp(['Trial ' handles.TrialNr ' completed.']); toc;
             disp('==================================================');
             
             start(handles.vidObj); %get camera ready to be triggered again
@@ -1376,7 +1384,7 @@ try
             handles.FrameRate.String = set(src, 'FrameRate');
             src.FrameRate = handles.FrameRate.String{1}; %use highest available frame rate
         catch
-            handles.FrameRate.String = {'30'};
+            handles.FrameRate.String = '30';
         end
     end
     
